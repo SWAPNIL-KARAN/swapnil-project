@@ -1,0 +1,134 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model account {
+  account_no    String             @id
+  balance       Decimal         @db.Decimal(10, 2)
+  credit_card   credit_card[]
+  customer      customer[]
+  transaction_s transaction_s[]
+}
+
+model bank {
+  b_name   String     @db.VarChar(255)
+  bank_id  String     @id @default(cuid())
+  branch   branch[]
+  customer customer[]
+}
+
+model branch {
+  br_code Int    @id
+  br_name String @db.VarChar(255)
+  state   String @db.VarChar(255)
+  city    String @db.VarChar(255)
+  bank_id String @default(cuid())
+  bank    bank   @relation(fields: [bank_id], references: [bank_id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model credit_card {
+  cr_id      String   @id @default(cuid())
+  exp_date   DateTime @db.Date
+  type       String   @db.VarChar(255)
+  cr_limit   Decimal  @db.Decimal(10, 2)
+  account_no String
+  account    account  @relation(fields: [account_no], references: [account_no], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model customer {
+  cust_id            Int               @id @default(autoincrement())
+  pincode            Int
+  state              String               @db.VarChar(255)
+  f_name             String               @db.VarChar(255)
+  l_name             String               @db.VarChar(255)
+  bank_id            String
+  account_no         String
+  account            account              @relation(fields: [account_no], references: [account_no], onDelete: NoAction, onUpdate: NoAction)
+  bank               bank                 @relation(fields: [bank_id], references: [bank_id], onDelete: NoAction, onUpdate: NoAction)
+  customer_mobile_no customer_mobile_no[]
+  feedback           feedback[]
+  loan               loan[]
+  user              users[]
+}
+
+model customer_mobile_no {
+  mobile_no String   @db.VarChar(10)
+  cust_id   Int
+  customer  customer @relation(fields: [cust_id], references: [cust_id])
+
+  @@id([mobile_no, cust_id])
+}
+
+model feedback {
+  feedback_no      Int      @id @default(autoincrement())
+  date_of_feedback DateTime @db.Date
+  feedback_given   String   @db.VarChar(255)
+  cust_id          Int
+  customer         customer @relation(fields: [cust_id], references: [cust_id], onDelete: NoAction, onUpdate: NoAction, map: "__cust_id_fkey")
+}
+
+model loan {
+  loan_id  String    @id @default(cuid())
+  amount   Decimal   @db.Decimal(10, 2)
+  cust_id  Int
+  customer customer  @relation(fields: [cust_id], references: [cust_id], onDelete: NoAction, onUpdate: NoAction)
+  payment  payment[]
+}
+
+model payment {
+  payment_no   Int      @default(autoincrement())
+  payment_date DateTime @db.Date
+  payment_amt  Decimal  @db.Decimal(10, 2)
+  loan_id      String
+  loan         loan     @relation(fields: [loan_id], references: [loan_id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([payment_no, loan_id])
+}
+
+model transaction_s {
+  t_type       String   @db.VarChar(255)
+  t_id         String   @id @default(cuid())
+  tr_date      DateTime @db.Date
+  borrow_amt   Decimal  @db.Decimal(10, 2)
+  withdraw_amt Decimal  @db.Decimal(10, 2)
+  deposit_amt  Decimal  @db.Decimal(10, 2)
+  account_no   String
+  account      account  @relation(fields: [account_no], references: [account_no])
+}
+
+model users {
+  id           Int            @id @default(autoincrement())
+  name         String         @db.VarChar(255)
+  email        String         @unique @db.VarChar(255)
+  password     String         @db.VarChar(255)
+  cust_id      Int
+  customer     customer       @relation(fields: [cust_id], references: [cust_id])
+  usersdetails usersdetails[]
+}
+
+model usersdetails {
+  refresh_token String? @db.VarChar(255)
+  access_token  String? @db.VarChar(255)
+  expires_at    Int?
+  token_type    String? @db.VarChar(255)
+  scope         String? @db.VarChar(255)
+  id_token      String? @db.VarChar(255)
+  session_state String? @db.VarChar(255)
+  id            Int     @id
+  user         users   @relation(fields: [id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model VerificationToken {
+  id      String   @id @default(cuid())
+  email   String
+  token   String   @unique
+  expires DateTime
+
+  @@unique([email, token])
+}
